@@ -1,17 +1,20 @@
 import React, { Component } from 'react';
 import './App.css';
 import TOC from "./Components/TOC";
-import Content from "./Components/Content";
+import ReadContent from "./Components/ReadContent";
 import Subject from "./Components/Subject";
-
+import Controll from "./Components/Controll";
+import CreateContent from "./Components/CreateContent";
+import UpdateContent from "./Components/UpdateContent";
 
 class App extends Component {
   //컴퍼넌트 실행시킬때 제일먼저 
   //초기화 시키고싶은 코드는 constructor 안에 코드를 작성한다
   constructor(props) {
     super(props);
+    this.max_content_id = 3;
     this.state = {
-      mode: "Read",
+      mode: "create",
       selected_content_id: 2,
       subject: { title: 'WEB', sub: 'Wolrd Wide WEB!' },
       welcome: { title: 'Welcome', desc: 'Hello, React!!' },
@@ -25,23 +28,75 @@ class App extends Component {
   // state : react에서 props의 값이나 , state값이 바뀌면 state를 
   // 가지고있는 컴포넌트의 render() 함수가 다시호출됨
   // 그 하위의 컴포넌트의 렌더들도 다시호출됨
-  render() {
-    var _title, _desc = null;
+  getReadContent() {
+    var i = 0;
+    while (i < this.state.contents.length) {
+      var data = this.state.contents[i];
+      if (data.id === this.state.selected_content_id) {
+        return data;
+        break;
+      }
+      i = i + 1;
+    }
+
+  }
+
+  getContent() {
+    var _title, _desc, _article = null;
     if (this.state.mode === 'Welcome') {
       _title = this.state.welcome.title;
       _desc = this.state.welcome.desc;
+      _article = <ReadContent title={_title} desc={_desc}></ReadContent>
     } else if (this.state.mode === 'Read') {
-      var i = 0;
-      while (i < this.state.contents.length) {
-        var data = this.state.contents[i];
-        if (data.id === this.state.selected_content_id) {
-          _title = data.title;
-          _desc = data.desc;
-          break;
-        }
-        i = i + 1;
-      }
+      var _content = this.getReadContent();
+      _article = <ReadContent title={_content.title} desc={_content.desc}></ReadContent>
+    } else if (this.state.mode === 'create') {
+      _article = <CreateContent onSubmit={function (_title, _desc) {
+        // add contend to this.state.contents
+        this.max_content_id = this.max_content_id + 1;
+        // this.state.contents.push(
+        //   {id:this.max_content_id, title:_title , desc:_desc}
+        // );
+        // 성능 개선시 훨씬 좋음,concat 원본을 바꾸지않고 사용할수있다.
+        // concat()을 사용하는이유는 수정할때 원본을 수정하지않고 복제본을 수정하기위해
+        // var _contents = this.state.contents.concat(
+        //   { id: this.max_content_id, title: _title, desc: _desc }
+        // )
+        var _contents = Array.from(this.state.contents);
+        _contents.push({
+          id: this.max_content_id, title: _title, desc: _desc
+        });
+        this.setState({
+          contents: _contents,
+          mode: 'Read',
+          selected_content_id: this.max_content_id
+        });
+
+      }.bind(this)}></CreateContent>
+    } else if (this.state.mode === 'update') {
+      _content = this.getReadContent();
+      _article = <UpdateContent data={_content} onSubmit={
+        function (_id, _title, _desc) {
+          var _contents = Array.from(this.state.contents);
+          var i = 0;
+          while (i < _contents.length) {
+            if (_contents[i].id === _id) {
+              _contents[i] = { id: _id, title: _title, desc: _desc }
+              break;
+            }
+            i = i + 1;
+          }
+          this.setState({
+            contents: _contents,
+            mode: 'Read'
+          });
+
+        }.bind(this)}></UpdateContent>
     }
+    return _article;
+  }
+  render() {
+    console.log('App render')
     //onChangePage이벤트 컴포넌트안에서 링크클릭시 이벤트에 설치한 함수를 호출하도록 만듬 
     return (
       <div className="App">
@@ -68,7 +123,12 @@ class App extends Component {
             })
           }.bind(this)}
           data={this.state.contents}></TOC>
-        <Content title={_title} desc={_desc}></Content>
+        <Controll onChangeMode={function (_mode) {
+          this.setState({
+            mode: _mode
+          });
+        }.bind(this)} />
+        {this.getContent()}
       </div>
     );
   }
